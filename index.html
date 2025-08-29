@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Bang Theory Trivia - Mobile Friendly</title>
+<style>
+body { font-family: Verdana, sans-serif; text-align:center; background:#f5f5f5; padding:50px; margin:0; }
+h1 { margin-bottom:10px; }
+.scoreboard { margin-bottom:20px; font-size:18px; }
+.card-container { perspective:1000px; display:flex; justify-content:center; align-items:flex-start; gap:20px; flex-wrap: wrap; }
+.card { width:400px; height:400px; position:relative; transform-style:preserve-3d; transition:transform 0.8s; cursor:pointer; margin-top:50px; }
+.card.flipped { transform: rotateY(180deg); }
+.card-side { position:absolute; width:100%; height:100%; backface-visibility:hidden; border:2px solid #333; border-radius:10px; background:white; padding:20px; box-shadow:0 5px 15px rgba(0,0,0,0.2); text-align:left; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; overflow-y:auto; }
+.card-back { transform:rotateY(180deg); }
+#info-card { width:150px; height:300px; border:2px solid #333; border-radius:10px; background:white; padding:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2); text-align:left; font-weight:bold; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; overflow-y:auto; }
+#reveal-btn { padding:12px 24px; font-size:16px; border:none; border-radius:8px; background:#333; color:white; cursor:pointer; margin-top:100px; }
+#reveal-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.answer-buttons { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+.answer-buttons button { padding:8px 16px; font-size:14px; }
+#dice-container { margin-top:20px; }
+#dice { display:inline-block; font-size:60px; width:80px; height:80px; line-height:80px; border:2px solid #333; border-radius:10px; margin-top:10px; user-select:none; }
+#roll-dice-btn { padding:10px 20px; font-size:16px; margin-top:10px; cursor:pointer; }
+#main-menu, #edit-rules, #player-setup { position:fixed; top:0; left:0; width:100%; height:100%; background:#f5f5f5; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:1000; overflow-y:auto; }
+#main-menu h1, #edit-rules h1, #player-setup h1 { font-size:48px; margin-bottom:20px; }
+#main-menu button, #edit-rules button, #player-setup button { padding:15px 30px; font-size:20px; cursor:pointer; margin:5px; }
+.game-container { display:flex; flex-direction:column; align-items:center; }
+#back-btn, #rules-back-btn, #end-game-btn { margin-top:20px; padding:12px 24px; font-size:16px; border:none; border-radius:8px; background:#333; color:white; cursor:pointer; }
+
+/* Player Setup Inputs */
+#player-inputs { display:flex; flex-direction:column; gap:10px; width:min(90%,420px); }
+.name-input { padding:10px; font-size:18px; border:1px solid #ccc; border-radius:8px; }
+
+/* --- Mobile Responsive --- */
+@media (max-width: 768px) {
+  body { padding:20px; }
+  .card-container { flex-direction: column; align-items: center; gap:15px; }
+  .card { width:95%; height:auto; aspect-ratio:4/3; margin-top:20px; }
+  #info-card { width:90%; height:auto; order:-1; margin-bottom:20px; }
+  #dice { font-size:50px; width:70px; height:70px; line-height:70px; }
+  #roll-dice-btn, #reveal-btn, #end-game-btn { font-size:18px; padding:12px 20px; width:80%; max-width:300px; }
+  .answer-buttons button { font-size:16px; padding:10px 14px; width:80%; max-width:250px; }
+  .scoreboard { font-size:16px; }
+}
+</style>
+</head>
+<body>
+
+    
+
+<!-- Main Menu -->
+<div id="main-menu">
+  <h1>Big Bang Theory Trivia</h1>
+  <button id="start-btn">Start Game</button>
+  <button id="edit-rules-btn">Edit Rules</button>
+</div>
+
+<!-- Edit Rules Page -->
+<div id="edit-rules" style="display:none;">
+  <h1>Edit Rules</h1>
+  <label>Number of Players:
+    <select id="num-players">
+      <option value="1">1</option>
+      <option value="2" selected>2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+    </select>
+  </label>
+  <br><br>
+  <label>Game Duration:
+    <select id="num-rounds">
+      <option value="5" selected>5 Rounds</option>
+      <option value="10">10 Rounds</option>
+      <option value="15">15 Rounds</option>
+      <option value="20">20 Rounds</option>
+      <option value="endless">Endless</option>
+    </select>
+  </label>
+  <br><br>
+  <button id="save-rules-btn">Save Rules</button>
+  <button id="rules-back-btn">Back</button>
+</div>
+
+<!-- Player Setup Page -->
+<div id="player-setup" style="display:none;">
+  <h1>Enter Player Names</h1>
+  <div id="player-inputs"></div>
+  <div style="margin-top:16px;">
+    <button id="names-continue-btn">Continue</button>
+    <button id="names-back-btn">Back</button>
+  </div>
+</div>
+
+<!-- Game Container -->
+<div class="game-container" style="display:none;">
+  <div class="scoreboard" id="scoreboard"></div>
+  <div id="dice-container">
+    <button id="roll-dice-btn">Roll Dice</button>
+    <div id="dice">1</div>
+  </div>
+  <div class="card-container">
+    <!-- Info Card -->
+    <div id="info-card">
+      <div>Season:Episode</div>
+      <div>Seasons 1-2</div>
+      <div>Seasons 3-4</div>
+      <div>Seasons 5-6</div>
+      <div>Seasons 7-8</div>
+      <div>Seasons 9-10</div>
+      <div>Seasons 11-12</div>
+    </div>
+    <!-- Main Question Card -->
+    <div id="card" class="card">
+      <div class="card-side card-front">
+        <h2>Questions</h2>
+        <ol id="questions"></ol>
+      </div>
+      <div class="card-side card-back">
+        <h2>Answers</h2>
+        <ol id="answers"></ol>
+        <div class="answer-buttons">
+          <button onclick="markAnswer(true)">Got it Right</button>
+          <button onclick="markAnswer(false)">Got it Wrong</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <button id="reveal-btn" onclick="flipCard()" disabled>Reveal Answers</button>
+  <button id="end-game-btn" style="display:none;">End Game</button>
+  <button id="back-btn">Back to Main Menu</button>
+</div>
+
+<script>
+const mainMenu = document.getElementById('main-menu');
+const editRules = document.getElementById('edit-rules');
+const playerSetup = document.getElementById('player-setup');
+const startBtn = document.getElementById('start-btn');
+const editRulesBtn = document.getElementById('edit-rules-btn');
+const saveRulesBtn = document.getElementById('save-rules-btn');
+const rulesBackBtn = document.getElementById('rules-back-btn');
+const namesContinueBtn = document.getElementById('names-continue-btn');
+const namesBackBtn = document.getElementById('names-back-btn');
+const playerInputs = document.getElementById('player-inputs');
+const gameContainer = document.querySelector('.game-container');
+const rollBtn = document.getElementById('roll-dice-btn');
+const diceDiv = document.getElementById('dice');
+const revealBtn = document.getElementById('reveal-btn');
+const backBtn = document.getElementById('back-btn');
+const endGameBtn = document.getElementById('end-game-btn');
+const scoreboardDiv = document.getElementById('scoreboard');
+const numPlayersInput = document.getElementById('num-players');
+const numRoundsInput = document.getElementById('num-rounds');
+
+let currentPlayer = 1;
+let scores = {};
+let totalPlayers = 2;
+let totalRounds = 5;
+let currentRound = 1;
+let cardFlipped = false;
+let currentCard = null;
+let currentQuestionIndex = null;
+let usedQuestions = [];
+let playerNames = [];
+
+// --- Question Pools ---
+  const questionPools = [
+    [
+      "1:1 How do Sheldon and Leonard attempt to make money in the Pilot Episode, before backing out?",
+      "1:1 Why do Sheldon and Leonard originally try to earn extra money in the pilot episode?",
+      "1:1 According to Sheldon, how large does the height of a single step have to be off of the norm to cause most people to trip?",
+      "1:1 What was the name of Sheldon and Leonard's previous neighbour, a 200 pound transvestite with a skin condition?",
+      "1:1 How many friends does Sheldon have on MySpace?",
+      "1:1 What game does Sheldon claim the gang stayed up 'till One in the morning playing?",
+      "1:1 What famous Star Wars character takes the form of Leonard's 'no more tears shampoo'?",
+      "1:1 When attempting to rescue Penny's old TV from her ex-boyfriend Curt, what does Leonard claim his and Sheldon's combined IQ is?",
+      "1:1 What Level has Howard had in World Of Warcraft tiger, and what is its name?"
+    ],
+    [
+      "3:1 When arriving home from his and the gang's expedition to the arctic, What does Sheldon say their expedition was? A Hoot and A  _____ ?  ",
+      "3:1 What does Sheldon say to the couch cushion in his spot upon returning from his arctic expedition?",
+      "3:1 Who claims they should've gone to tell Penny they were back from the arctic expedition after seeing her kissing Leonard? ",
+      "3:1 What did the gang agree to never speak about that happened on their arctic expedition? ",
+      "3:1 How long did the gang spend at the north pole? ",
+      "3:1 What celebratory delicacy does Penny compare to the Nobel Prize",
+      "3:1 What does Raj name Howard's new mustache that he (Howard) calls the Clooney?",
+      "3:1 How long does Barry Kripke claim people have been pointing and laughing at Sheldon?",
+      "3:1 What gift does Leonard give Penny from the north pole?",
+      "3:1 Name one of the three things does Howard use as 'clues' as to how he knows Sheldon ran away. ",
+      "3:1 What drink does Mrs.Cooper say Howard will take?",
+
+    ],
+    [
+      "5:1 What does Sheldon ''put on'' to think about Penny's ''brain teaser'', ''It's not what it looks like'', after she is caught wrapped naked in a duvet with Koothrappali?",
+      "5:1 What does Sheldon originally decide as his new ''Rank'' in paintball?",
+      "5:1 In Raj's poem that Leonard reveals to the gang, who does he want to play his ''Clarinet''",
+      "5:1 What does Penny use to drink wine out of instead of an actual wine glass?",
+      "5:1 What does Penny claim wine glasses should have?",
+      "5:1 Who does Sheldon have on a videochat to talk to Leonard about his troubles with Penny and Raj and what is their advice?",
+      "5:1 What does Raj say you can't ruin ice cream with?",
+      "5:1 Who does Sheldon claim ''Jamba Juice'' is for?",
+      "5:1 What three characters does Sheldon claim he is following in the footsteps of as he sacrificies himself in paintball?",
+      "5:1 What does Penny plan to do, instead of acting, in her temporary plan to move back to Nebraska?",
+    ],
+    [
+      "7:1 What mythological creature does Sheldon think is released upon Leondard in his nightmare while Leonard is at the North Sea?",
+      "7:1 What stain of liquid does Raj claim looked like his ex-girlfriend, Lucy?",
+      "7:1 What animal does Sheldon tell Raj to ''pick and choose what aspects of it's lifestyle you want to embrace''?",
+      "7:1 What is the name of the drinking game Leonard plays at The North Sea?",
+      "7:1 What is the worst thing, for Penny, about Leonard being at The North Sea?",
+      
+    
+    ],
+    [
+      "9:1 What did Sheldon previously think was ''the worst'' , before Amy broke up with him?",
+      "9:1 WhatWhat song does Penny sing in her wedding vows to Leonard",
+      "9:1 WhatWhat does Raj make for the gang to watch Leonard and Penny's wedding?",
+      "9:1 WhatWho did Leonard kiss while at the North Sea?",
+      "9:1 WhatName one of three things that, according to Sheldon, is all you hear women say",
+      
+    ],
+    [
+      "11:1 Who calls Sheldon as he is mid-proposal to Amy?",
+      "11:1 Apart from Amy's father, who else's permission did Sheldon need to propose to Amy?",
+      "11:1 Why was Sheldon's phone on airplane mode when Leonard tried to call him?"
+    ]
+  ];
+
+  const answerPools = [
+    [
+      "Donating to a High IQ sperm bank",
+      "To get 'fractional T1 bandwidth' (faster wifi)",
+      "Two millimeters",
+      "Louis/Louise",
+      "Two Hundred and Twelve",
+      "Klingon Boggle",
+      "Darth Vader - Luke Skywalker is the conditioner",
+      "Three hundred and sixty",
+      "Buttons, He's had it since level 10."
+    ],
+    [
+      "Half. (A Hoot and A Half)",
+      "Hello Old Friend ... Daddy's Home",
+      "Howard",
+      "The night the heat went out. (They slept together naked)",
+      "Three months",
+      "A pie. (A celebratory pie for when she was supposed to be named head cheerleader)",
+      "The Mario and Luigi",
+      "His whole life",
+      "A preserved snowflake",
+      "''He's not answering his phone, he handed in his resignation at the university and (most importantly) he sent a text that said 'im running away.' ''",
+      "A Cola",
+    ],
+    [
+      "His ''Thinking cap''",
+      "Captain",
+      "Bernadette",
+      "A measuring jug.",
+      "Handles",
+      "Leonard's Mother, Beverly Hofstadter, tells him to ''Buck Up''",
+      "Chocolate sprinkles",
+      "Heroes",
+      "Captain. ,Kirk, Crunch, and Kangaroo",
+      "Teach acting",
+    ],
+    [
+      "The Kraken",
+      "Oil, An oil stain that was ''lookin' gooood''",
+      "The Dung beatle",
+      "''Iceberg''",
+      "She has to, ''Proccess her emotinal pain without vodka''",
+      
+    ],
+    [
+      "Paper cuts",
+      "''You've got a friend in me'' from Toy Story",
+      "Hot cinnamon rolls",
+      "Mandy Chao",
+      "''I'll have a salad'', ''Where's my lipgloss'', '' I think this element should be called radium''",
+    ],
+    [
+      "Leonard",
+      "Stephen Hawking",
+      "Because he was on an airplane"
+    ]
+  ];
+
+// --- Functions ---
+function getRandomIndex(poolIndex) {
+  const pool = questionPools[poolIndex];
+  if (!usedQuestions[poolIndex]) usedQuestions[poolIndex] = [];
+  if (usedQuestions[poolIndex].length === pool.length) usedQuestions[poolIndex] = [];
+  let available = pool.map((_, i) => i).filter(i => !usedQuestions[poolIndex].includes(i));
+  const randomIndex = available[Math.floor(Math.random() * available.length)];
+  usedQuestions[poolIndex].push(randomIndex);
+  return randomIndex;
+}
+function getRandomCard() {
+  const questions = [], answers = [];
+  for (let i = 0; i < questionPools.length; i++) {
+    const idx = getRandomIndex(i);
+    questions.push(questionPools[i][idx]);
+    answers.push(answerPools[i][idx]);
+  }
+  return {questions, answers};
+}
+function loadCard() {
+  const qList = document.getElementById("questions");
+  const aList = document.getElementById("answers");
+  qList.innerHTML = ""; aList.innerHTML = "";
+  currentCard.questions.forEach((q, i) => {
+  const li = document.createElement("li");
+  
+  // Split season:episode from the rest
+  const match = q.match(/^(\d+:\d+)\s*(.*)$/);
+  if (match) {
+    li.innerHTML = `<strong>${match[1]}</strong> ${match[2]}`;
+  } else {
+    li.textContent = q;
+  }
+  
+  if(currentQuestionIndex !== null && i !== currentQuestionIndex) li.style.color = "#aaa";
+  qList.appendChild(li);
+});
+
+  currentCard.answers.forEach((a,i)=>{
+    const li = document.createElement("li"); li.textContent = a;
+    if(currentQuestionIndex!==null && i!==currentQuestionIndex) li.style.color="#aaa";
+    aList.appendChild(li);
+  });
+}
+function flipCard(){
+  if(revealBtn.disabled) return;
+  const card = document.getElementById('card');
+  card.classList.toggle('flipped'); cardFlipped = !cardFlipped;
+  revealBtn.textContent = cardFlipped ? "Show Questions" : "Reveal Answers";
+}
+function updateScoreboard(){
+  let text = '';
+  for(let i=1;i<=totalPlayers;i++){
+    if(i>1) text += ' | ';
+    const label = playerNames[i-1] || `Player ${i}`;
+    text += `${label} Score: ${scores[i]}`;
+  }
+  const turnLabel = playerNames[currentPlayer-1] || `Player ${currentPlayer}`;
+  if(totalRounds === 'endless'){
+    text += ` | Round: Endless | Current Turn: ${turnLabel}`;
+    endGameBtn.style.display = 'inline-block';
+  } else {
+    text += ` | Round: ${currentRound} / ${totalRounds} | Current Turn: ${turnLabel}`;
+    endGameBtn.style.display = 'none';
+  }
+  scoreboardDiv.innerHTML = text;
+}
+function endGame(){
+  let maxScore = Math.max(...Object.values(scores));
+  let winners = [];
+  for(let i=1;i<=totalPlayers;i++){
+    if(scores[i] === maxScore) winners.push(playerNames[i-1] || `Player ${i}`);
+  }
+  let message = winners.length === 1 ?
+    `${winners[0]} wins with ${maxScore} points!` :
+    `It's a tie between ${winners.join(', ')} with ${maxScore} points!`;
+  scoreboardDiv.innerHTML = `Game Over! ${message}`;
+  rollBtn.disabled = true; revealBtn.disabled = true; endGameBtn.style.display = 'none';
+  const card = document.getElementById('card');
+  if(card.classList.contains('flipped')) card.classList.remove('flipped');
+}
+function markAnswer(correct){
+  if(correct) scores[currentPlayer]++;
+  currentPlayer = currentPlayer === totalPlayers ? 1 : currentPlayer + 1;
+  if(currentPlayer === 1 && totalRounds !== 'endless') currentRound++;
+  if(totalRounds !== 'endless' && currentRound > totalRounds){ endGame(); return; }
+  updateScoreboard();
+  const card = document.getElementById('card');
+  if(card.classList.contains('flipped')){
+    card.addEventListener('transitionend', function onEnd(){
+      currentCard = getRandomCard(); currentQuestionIndex = null; loadCard();
+      card.removeEventListener('transitionend', onEnd);
+    }); flipCard();
+  } else {
+    currentCard = getRandomCard(); currentQuestionIndex = null; loadCard();
+  }
+}
+function rollDice(){
+  rollBtn.disabled=true; revealBtn.disabled=true;
+  const numbers=[1,2,3,4,5,6]; let startTime=null; const duration=2500;
+  function animate(t){
+    if(!startTime) startTime=t; const elapsed = t-startTime;
+    const index = Math.floor((elapsed/duration*30)%6);
+    diceDiv.textContent = numbers[index];
+    if(elapsed < duration){ requestAnimationFrame(animate); }
+    else {
+      const finalNum = Math.floor(Math.random()*6)+1;
+      diceDiv.textContent = finalNum; currentQuestionIndex = finalNum-1;
+      loadCard(); rollBtn.disabled=false; revealBtn.disabled=false;
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// --- Event Listeners ---
+startBtn.addEventListener('click', showPlayerSetup);
+editRulesBtn.addEventListener('click', ()=>{ mainMenu.style.display='none'; editRules.style.display='flex'; });
+rulesBackBtn.addEventListener('click', ()=>{ editRules.style.display='none'; mainMenu.style.display='flex'; });
+saveRulesBtn.addEventListener('click', ()=>{
+  totalPlayers = parseInt(numPlayersInput.value); totalRounds = numRoundsInput.value;
+  alert(`Rules saved! Players: ${totalPlayers}, Duration: ${totalRounds}`);
+});
+namesBackBtn.addEventListener('click', ()=>{ playerSetup.style.display='none'; mainMenu.style.display='flex'; });
+namesContinueBtn.addEventListener('click', ()=>{
+  playerNames = [];
+  for(let i=1;i<=totalPlayers;i++){
+    const val = (document.getElementById(`player-name-${i}`)?.value || '').trim();
+    playerNames.push(val || `Player ${i}`);
+  }
+  startGame();
+});
+backBtn.addEventListener('click', ()=>{ gameContainer.style.display='none'; mainMenu.style.display='flex'; });
+rollBtn.addEventListener('click', rollDice);
+endGameBtn.addEventListener('click', endGame);
+
+// --- Navigation ---
+function showPlayerSetup(){
+  totalPlayers = parseInt(numPlayersInput.value) || totalPlayers;
+  playerInputs.innerHTML = '';
+  for(let i=1;i<=totalPlayers;i++){
+    const input = document.createElement('input');
+    input.type='text'; input.placeholder=`Player ${i}`; input.className='name-input';
+    input.id=`player-name-${i}`; playerInputs.appendChild(input);
+  }
+  mainMenu.style.display='none'; editRules.style.display='none'; playerSetup.style.display='flex';
+}
+function startGame(){
+  usedQuestions = questionPools.map(pool => []); scores = {};
+  for(let i=1;i<=totalPlayers;i++) scores[i]=0;
+  currentPlayer=1; currentRound=1;
+  mainMenu.style.display='none'; editRules.style.display='none'; playerSetup.style.display='none'; gameContainer.style.display='flex';
+  currentCard = getRandomCard(); currentQuestionIndex=null; loadCard(); diceDiv.textContent='1';
+  document.getElementById('card').classList.remove('flipped'); updateScoreboard();
+}
+
+// --- Initialize ---
+currentCard = getRandomCard(); loadCard();
+</script>
+</body>
+</html>
